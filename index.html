@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Synergy Spheres 3.0 – File Converter</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: linear-gradient(135deg, #0f172a, #1e293b);
+      --card-bg: #0e1a2b;
+      --text-color: #d1f4ff;
+      --primary: #00ffe7;
+      --hover: #55e6c1;
+      --accent: #0fffc2;
+      --shadow: rgba(0, 255, 255, 0.2);
+    }
+    [data-theme="light"] {
+      --bg: linear-gradient(to right, #f4f4f4, #eaeaea);
+      --card-bg: #ffffff;
+      --text-color: #222;
+      --primary: #0077ff;
+      --hover: #22dd88;
+      --accent: #4b5563;
+      --shadow: rgba(0, 0, 0, 0.1);
+    }
+    body {
+      background: var(--bg);
+      font-family: 'Orbitron', sans-serif;
+      color: var(--text-color);
+      text-align: center;
+      padding: 2rem;
+      transition: all 0.3s ease-in-out;
+    }
+    .theme-toggle {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      background: var(--primary);
+      color: #000;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 2px 10px var(--shadow);
+    }
+    h1 {
+      font-size: 2.8rem;
+      color: var(--primary);
+      text-shadow: 1px 1px 8px var(--accent);
+    }
+    .converter {
+      max-width: 720px;
+      margin: auto;
+      background: var(--card-bg);
+      padding: 3rem 2rem;
+      border-radius: 20px;
+      box-shadow: 0 0 40px var(--shadow);
+      margin-top: 2rem;
+      border: 1px solid var(--accent);
+      animation: fadeIn 0.6s ease-in;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .footer {
+      margin-top: 3rem;
+      font-size: 0.85rem;
+      color: var(--text-color);
+      opacity: 0.7;
+    }
+    #voiceBtn {
+      margin-top: 1rem;
+      background: transparent;
+      color: var(--primary);
+      border: 1px dashed var(--primary);
+      padding: 0.5rem;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+<script>
+  const userPref = localStorage.getItem('theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const theme = userPref || (prefersDark ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', theme);
+</script>
+
+<button class="theme-toggle" onclick="toggleTheme()">🌓 Toggle Theme</button>
+<h1>Synergy Spheres 3.0</h1>
+<p><strong>Smart, Secure, Open-Source File Converter Studio</strong></p>
+<div class="converter">
+  <button id="voiceBtn" onclick="startVoiceCommand()">🎙️ Voice Command</button>
+  <div id="status">Say “Convert file now” or “Dark mode”...</div>
+  <div id="dropZone" class="drop-zone">📁 Drop your files here or click to select</div>
+  <input type="file" id="fileInput" multiple style="display: none;" />
+  <select id="conversionType">
+    <option value="json2yaml">JSON to YAML</option>
+    <option value="yaml2json">YAML to JSON</option>
+    <option value="csv2json">CSV to JSON</option>
+    <option value="json2csv">JSON to CSV</option>
+    <option value="json2base64">JSON to Base64</option>
+    <option value="base642json">Base64 to JSON</option>
+  </select>
+  <label><input type="checkbox" id="prettyPrint" checked /> Format JSON Output</label>
+  <button class="convert" onclick="convert()">🚀 Convert Now</button>
+  <div id="results"></div>
+</div>
+
+<div class="footer">
+  Built with ❤️ by <strong>Synergy Spheres 3.0</strong> | Fully Client-Side · No Data Leaves Your Browser
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+<script>
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const newTheme = current === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+  }
+
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault(); dropZone.style.borderColor = '#00f6ff';
+  });
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.style.borderColor = '';
+  });
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    fileInput.files = e.dataTransfer.files;
+    dropZone.style.borderColor = '';
+  });
+  function convert() {
+    const files = fileInput.files;
+    const type = document.getElementById('conversionType').value;
+    const pretty = document.getElementById('prettyPrint').checked;
+    const results = document.getElementById('results');
+    results.innerHTML = '';
+
+    if (!files.length) return alert('Please select a file.');
+
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const text = e.target.result;
+        let output = '', error = '';
+        try {
+          switch(type) {
+            case 'json2yaml': output = jsyaml.dump(JSON.parse(text)); break;
+            case 'yaml2json': output = JSON.stringify(jsyaml.load(text), null, pretty ? 2 : 0); break;
+            case 'csv2json':
+              const lines = text.trim().split('\n');
+              const headers = lines[0].split(',');
+              output = JSON.stringify(lines.slice(1).map(line => {
+                const values = line.split(',');
+                return Object.fromEntries(headers.map((h, i) => [h, values[i]]));
+              }), null, pretty ? 2 : 0); break;
+            case 'json2csv':
+              const arr = JSON.parse(text);
+              const keys = Object.keys(arr[0]);
+              output = keys.join(',') + '\\n' + arr.map(obj => keys.map(k => obj[k]).join(',')).join('\\n'); break;
+            case 'json2base64': output = btoa(text); break;
+            case 'base642json': output = JSON.stringify(JSON.parse(atob(text)), null, pretty ? 2 : 0); break;
+          }
+        } catch (err) { error = err.message; }
+
+        const resultDiv = document.createElement('div');
+        resultDiv.className = 'file-result';
+        resultDiv.innerHTML = `<h4>${file.name}</h4><pre>${error || output}</pre>`;
+        if (!error) {
+          const downloadBtn = document.createElement('button');
+          downloadBtn.innerText = 'Download';
+          downloadBtn.onclick = () => {
+            const blob = new Blob([output], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = file.name + '_converted.txt';
+            link.click();
+            URL.revokeObjectURL(url);
+          };
+          resultDiv.appendChild(downloadBtn);
+        }
+        results.appendChild(resultDiv);
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  // 🎙️ Web Speech API integration
+  function startVoiceCommand() {
+    if (!('webkitSpeechRecognition' in window)) {
+      alert('Voice recognition not supported in this browser.');
+      return;
+    }
+    const recognition = new webkitSpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.start();
+    recognition.onresult = (event) => {
+      const command = event.results[0][0].transcript.toLowerCase();
+      document.getElementById('status').innerText = `Heard: ${command}`;
+      if (command.includes('convert')) convert();
+      if (command.includes('dark')) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        localStorage.setItem('theme', 'dark');
+      }
+      if (command.includes('light')) {
+        document.documentElement.setAttribute('data-theme', 'light');
+        localStorage.setItem('theme', 'light');
+      }
+    };
+    recognition.onerror = () => {
+      document.getElementById('status').innerText = 'Voice error or cancelled.';
+    };
+  }
+
+  // Placeholder for IPFS integration
+  // Future enhancement: Upload converted output using IPFS (e.g., web3.storage or Storacha)
+</script>
+</body>
+</html>
